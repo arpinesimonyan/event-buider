@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0F1B24;
+    --panel: #16242F;
+    --panel-2: #1C2E3A;
+    --grid: rgba(148,197,214,0.07);
+    --border: #263F4C;
+    --ink: #EAF0F2;
+    --muted: #8CA3AD;
+    --accent: #FF7A30;
+    --accent-dim: rgba(255,122,48,0.15);
+    --teal: #4FD1C5;
+    --teal-dim: rgba(79,209,197,0.15);
+    --danger: #E5533D;
+    --radius: 10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0/100% 32px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/32px 100%,
+      var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    min-height:100vh;
+    padding:32px 20px 80px;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+
+  /* header / ticket strip */
+  .ticket{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:22px 26px;
+    margin-bottom:22px;
+    overflow:hidden;
+  }
+  .ticket::before, .ticket::after{
+    content:"";
+    position:absolute;
+    left:0; right:0;
+    height:10px;
+    background-image: radial-gradient(circle at 10px 5px, var(--bg) 5px, transparent 5.5px);
+    background-size: 20px 10px;
+    background-repeat: repeat-x;
+  }
+  .ticket::before{ top:-5px; }
+  .ticket::after{ bottom:-5px; transform:rotate(180deg); }
+  .eyebrow{
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--accent); font-weight:600; margin-bottom:6px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:clamp(28px,4vw,38px);
+    margin:0 0 14px 0;
+    letter-spacing:-0.01em;
+  }
+  .meta-row{display:flex; gap:14px; flex-wrap:wrap;}
+  .meta-field{flex:1 1 200px; min-width:160px;}
+  .meta-field label{display:block; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px;}
+  .meta-field input{
+    width:100%; background:var(--bg); border:1px solid var(--border); border-radius:6px;
+    color:var(--ink); padding:9px 10px; font:inherit; font-size:14px;
+  }
+  .meta-field input:focus{outline:none; border-color:var(--accent);}
+
+  /* ruler / progress meter */
+  .ruler{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px 22px 14px;
+    margin-bottom:22px;
+    display:flex; align-items:center; gap:18px;
+  }
+  .ruler-total{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:30px; font-weight:700; color:var(--accent); min-width:70px;
+  }
+  .ruler-track{flex:1;}
+  .ruler-ticks{display:flex; gap:4px; margin-bottom:6px;}
+  .tick{
+    flex:1; height:14px; border-radius:3px; background:var(--bg);
+    border:1px solid var(--border); overflow:hidden; position:relative;
+  }
+  .tick > i{display:block; height:100%; width:0%; background:var(--accent); transition:width .3s ease;}
+  .tick-labels{display:flex; gap:4px; font-size:10px; letter-spacing:.1em; color:var(--muted);}
+  .tick-labels span{flex:1; text-align:center;}
+
+  /* sections */
+  .section{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    margin-bottom:14px;
+    overflow:hidden;
+  }
+  .section-head{
+    display:flex; align-items:center; gap:14px;
+    padding:16px 20px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .section-head:hover{background:var(--panel-2);}
+  .tab-index{
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:13px;
+    color:var(--bg); background:var(--teal);
+    width:30px; height:30px; border-radius:6px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .section-titles{flex:1;}
+  .section-titles .st-name{
+    font-family:'Space Grotesk', sans-serif; font-size:17px; font-weight:600;
+  }
+  .section-titles .st-sub{font-size:11px; color:var(--muted); margin-top:2px;}
+  .section-progress{
+    font-size:12px; color:var(--muted); min-width:44px; text-align:right;
+  }
+  .chev{
+    color:var(--muted); font-size:13px; transition:transform .2s ease; flex-shrink:0;
+  }
+  .section.open .chev{transform:rotate(90deg); color:var(--accent);}
+  .section-body{
+    max-height:0; overflow:hidden; transition:max-height .25s ease;
+    border-top:1px solid transparent;
+  }
+  .section.open .section-body{ border-top:1px solid var(--border); }
+  .section-body-inner{padding:18px 20px 22px;}
+  .field-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);}
+  .field input, .field select, .field textarea{
+    background:var(--bg); border:1px solid var(--border); border-radius:6px;
+    color:var(--ink); padding:9px 10px; font:inherit; font-size:13.5px; resize:vertical;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--accent);}
+  .field textarea{min-height:56px;}
+  @media (max-width:560px){ .field-grid{grid-template-columns:1fr;} }
+
+  /* footer */
+  .footer{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:12px; margin-top:22px;
+  }
+  .status{font-size:12px; color:var(--muted);}
+  .status .dot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--teal); margin-right:6px;}
+  .btns{display:flex; gap:10px;}
+  button{
+    font:inherit; font-size:12.5px; letter-spacing:.05em; text-transform:uppercase;
+    padding:10px 16px; border-radius:6px; cursor:pointer; border:1px solid var(--border);
+    background:var(--panel-2); color:var(--ink);
+  }
+  button:hover{border-color:var(--accent);}
+  button.primary{background:var(--accent); border-color:var(--accent); color:#1A0D05; font-weight:600;}
+  button.primary:hover{opacity:.9;}
+  button.ghost{background:transparent; color:var(--muted);}
+  button.ghost:hover{color:var(--danger); border-color:var(--danger);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="ticket">
+    <div class="eyebrow">Run Sheet · Draft</div>
+    <h1 id="titleDisplay">Event Builder</h1>
+    <div class="meta-row">
+      <div class="meta-field">
+        <label>Event Name</label>
+        <input type="text" id="eventName" placeholder="e.g. Q3 Partner Summit">
+      </div>
+      <div class="meta-field">
+        <label>Event Date</label>
+        <input type="date" id="eventDate">
+      </div>
+      <div class="meta-field">
+        <label>Location / City</label>
+        <input type="text" id="eventCity" placeholder="e.g. Yerevan">
+      </div>
+    </div>
+  </div>
+
+  <div class="ruler">
+    <div class="ruler-total" id="totalPct">0%</div>
+    <div class="ruler-track">
+      <div class="ruler-ticks" id="ticks"></div>
+      <div class="tick-labels">
+        <span>Transport</span><span>Translations</span><span>Venue</span><span>Meal</span><span>Logistics</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="sections"></div>
+
+  <div class="footer">
+    <div class="status"><span class="dot"></span><span id="statusText">All changes save automatically</span></div>
+    <div class="btns">
+      <button class="ghost" id="resetBtn">Reset</button>
+      <button class="primary" id="exportBtn">Export Summary</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SECTIONS = [
+  {
+    key:'transport', name:'Transport', sub:'Getting people there and back',
+    fields:[
+      {id:'mode', label:'Mode of transport', type:'select', options:['Bus','Car / Shuttle','Train','Flight','Walking','Other']},
+      {id:'pickup', label:'Pickup point', type:'text'},
+      {id:'dropoff', label:'Drop-off point', type:'text'},
+      {id:'headcount', label:'Travelers / vehicles', type:'text'},
+      {id:'departure', label:'Departure time', type:'time'},
+      {id:'contact', label:'Driver / dispatcher contact', type:'text'},
+      {id:'notes', label:'Notes', type:'textarea', full:true}
+    ]
+  },
+  {
+    key:'translations', name:'Translations', sub:'Languages and interpretation',
+    fields:[
+      {id:'languages', label:'Languages required', type:'text', placeholder:'e.g. EN, HY, RU'},
+      {id:'interpreters', label:'Number of interpreters', type:'text'},
+      {id:'interpType', label:'Interpretation type', type:'select', options:['Simultaneous','Consecutive','Whisper (chuchotage)','Written only']},
+      {id:'equipment', label:'Equipment needed', type:'text', placeholder:'e.g. headsets, booth'},
+      {id:'sessionTimes', label:'Session times', type:'text'},
+      {id:'notes', label:'Notes', type:'textarea', full:true}
+    ]
+  },
+  {
+    key:'venue', name:'Venue', sub:'Where it happens',
+    fields:[
+      {id:'name', label:'Venue name', type:'text'},
+      {id:'address', label:'Address', type:'text'},
+      {id:'capacity', label:'Capacity', type:'text'},
+      {id:'layout', label:'Room layout', type:'select', options:['Theatre','Classroom','Banquet','U-shape','Boardroom','Reception / standing']},
+      {id:'av', label:'AV requirements', type:'text', placeholder:'e.g. mic, projector, livestream'},
+      {id:'accessibility', label:'Accessibility notes', type:'text'},
+      {id:'notes', label:'Notes', type:'textarea', full:true}
+    ]
+  },
+  {
+    key:'meal', name:'Meal', sub:'Food and beverage',
+    fields:[
+      {id:'type', label:'Meal type', type:'select', options:['Breakfast','Lunch','Dinner','Coffee break','Reception / cocktail']},
+      {id:'headcount', label:'Headcount', type:'text'},
+      {id:'dietary', label:'Dietary restrictions', type:'text', placeholder:'e.g. vegan, halal, nut-free'},
+      {id:'style', label:'Service style', type:'select', options:['Buffet','Plated','Family style','Boxed / grab-and-go']},
+      {id:'time', label:'Service time', type:'time'},
+      {id:'caterer', label:'Caterer contact', type:'text'},
+      {id:'notes', label:'Notes', type:'textarea', full:true}
+    ]
+  },
+  {
+    key:'logistics', name:'Logistics', sub:'Everything holding it together',
+    fields:[
+      {id:'schedule', label:'Run of show', type:'textarea', full:true, placeholder:'Key timings, in order'},
+      {id:'staffing', label:'Staffing / roles', type:'text'},
+      {id:'signage', label:'Signage needs', type:'text'},
+      {id:'contingency', label:'Contingency plan', type:'textarea', full:true},
+      {id:'contact', label:'Primary on-site contact', type:'text'}
+    ]
+  }
+];
+
+const STORAGE_KEY = 'event-builder:draft';
+let state = { meta:{ eventName:'', eventDate:'', eventCity:'' }, data:{}, open: {transport:true} };
+SECTIONS.forEach(s => { if(!state.data[s.key]) state.data[s.key] = {}; });
+
+const sectionsEl = document.getElementById('sections');
+const ticksEl = document.getElementById('ticks');
+const totalPctEl = document.getElementById('totalPct');
+const statusEl = document.getElementById('statusText');
+
+function fieldValue(sec, f){ return (state.data[sec.key] && state.data[sec.key][f.id]) || ''; }
+
+function sectionCompletion(sec){
+  const total = sec.fields.length;
+  const filled = sec.fields.filter(f => (state.data[sec.key][f.id] || '').trim() !== '').length;
+  return total ? Math.round((filled/total)*100) : 0;
+}
+
+function overallCompletion(){
+  const pcts = SECTIONS.map(sectionCompletion);
+  return Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length);
+}
+
+function renderTicks(){
+  ticksEl.innerHTML = '';
+  SECTIONS.forEach(sec=>{
+    const t = document.createElement('div');
+    t.className='tick';
+    const i = document.createElement('i');
+    i.style.width = sectionCompletion(sec) + '%';
+    t.appendChild(i);
+    ticksEl.appendChild(t);
+  });
+  totalPctEl.textContent = overallCompletion() + '%';
+}
+
+function inputEl(sec, f){
+  let el;
+  if(f.type === 'select'){
+    el = document.createElement('select');
+    const blank = document.createElement('option');
+    blank.value=''; blank.textContent='Select…';
+    el.appendChild(blank);
+    f.options.forEach(o=>{
+      const opt = document.createElement('option');
+      opt.value=o; opt.textContent=o;
+      el.appendChild(opt);
+    });
+  } else if(f.type === 'textarea'){
+    el = document.createElement('textarea');
+  } else {
+    el = document.createElement('input');
+    el.type = f.type;
+  }
+  el.id = sec.key + '_' + f.id;
+  if(f.placeholder) el.placeholder = f.placeholder;
+  el.value = fieldValue(sec, f);
+  el.addEventListener('input', ()=>{
+    state.data[sec.key][f.id] = el.value;
+    renderTicks();
+    saveState();
+  });
+  return el;
+}
+
+function renderSections(){
+  sectionsEl.innerHTML = '';
+  SECTIONS.forEach((sec, idx)=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'section' + (state.open[sec.key] ? ' open' : '');
+
+    const head = document.createElement('div');
+    head.className = 'section-head';
+    head.innerHTML = `
+      <div class="tab-index">${String(idx+1).padStart(2,'0')}</div>
+      <div class="section-titles">
+        <div class="st-name">${sec.name}</div>
+        <div class="st-sub">${sec.sub}</div>
+      </div>
+      <div class="section-progress">${sectionCompletion(sec)}%</div>
+      <div class="chev">&#9656;</div>
+    `;
+    head.addEventListener('click', ()=>{
+      state.open[sec.key] = !state.open[sec.key];
+      wrap.classList.toggle('open');
+      const body = wrap.querySelector('.section-body');
+      body.style.maxHeight = wrap.classList.contains('open') ? body.scrollHeight + 'px' : '0px';
+      saveState();
+    });
+
+    const body = document.createElement('div');
+    body.className = 'section-body';
+    const inner = document.createElement('div');
+    inner.className = 'section-body-inner';
+    const grid = document.createElement('div');
+    grid.className = 'field-grid';
+
+    sec.fields.forEach(f=>{
+      const fWrap = document.createElement('div');
+      fWrap.className = 'field' + (f.full ? ' full' : '');
+      const label = document.createElement('label');
+      label.textContent = f.label;
+      fWrap.appendChild(label);
+      fWrap.appendChild(inputEl(sec, f));
+      grid.appendChild(fWrap);
+    });
+
+    inner.appendChild(grid);
+    body.appendChild(inner);
+    wrap.appendChild(head);
+    wrap.appendChild(body);
+    sectionsEl.appendChild(wrap);
+
+    if(state.open[sec.key]){
+      requestAnimationFrame(()=>{ body.style.maxHeight = body.scrollHeight + 'px'; });
+    }
+  });
+}
+
+function bindMeta(){
+  const nameEl = document.getElementById('eventName');
+  const dateEl = document.getElementById('eventDate');
+  const cityEl = document.getElementById('eventCity');
+  nameEl.value = state.meta.eventName;
+  dateEl.value = state.meta.eventDate;
+  cityEl.value = state.meta.eventCity;
+  const titleDisplay = document.getElementById('titleDisplay');
+  const updateTitle = ()=>{ titleDisplay.textContent = state.meta.eventName ? state.meta.eventName : 'Event Builder'; };
+  updateTitle();
+  nameEl.addEventListener('input', ()=>{ state.meta.eventName = nameEl.value; updateTitle(); saveState(); });
+  dateEl.addEventListener('input', ()=>{ state.meta.eventDate = dateEl.value; saveState(); });
+  cityEl.addEventListener('input', ()=>{ state.meta.eventCity = cityEl.value; saveState(); });
+}
+
+let saveTimer = null;
+function saveState(){
+  statusEl.textContent = 'Saving…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{
+      await window.storage.set(STORAGE_KEY, JSON.stringify(state));
+      statusEl.textContent = 'All changes saved';
+    }catch(e){
+      statusEl.textContent = 'Could not save — changes are local to this view only';
+    }
+  }, 350);
+}
+
+async function loadState(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      state = Object.assign(state, parsed);
+      SECTIONS.forEach(s => { if(!state.data[s.key]) state.data[s.key] = {}; });
+    }
+  }catch(e){ /* no saved draft yet */ }
+  bindMeta();
+  renderSections();
+  renderTicks();
+}
+
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  if(!confirm('Clear all fields? This cannot be undone.')) return;
+  state = { meta:{ eventName:'', eventDate:'', eventCity:'' }, data:{}, open:{transport:true} };
+  SECTIONS.forEach(s => { state.data[s.key] = {}; });
+  try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  bindMeta();
+  renderSections();
+  renderTicks();
+});
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  let out = `EVENT BUILDER — RUN SHEET\n`;
+  out += `${state.meta.eventName || 'Untitled event'}\n`;
+  out += `Date: ${state.meta.eventDate || '—'}   Location: ${state.meta.eventCity || '—'}\n`;
+  out += `Overall completion: ${overallCompletion()}%\n`;
+  out += `${'='.repeat(50)}\n\n`;
+  SECTIONS.forEach(sec=>{
+    out += `${sec.name.toUpperCase()}  (${sectionCompletion(sec)}%)\n`;
+    out += `${'-'.repeat(50)}\n`;
+    sec.fields.forEach(f=>{
+      const v = fieldValue(sec, f);
+      out += `${f.label}: ${v || '—'}\n`;
+    });
+    out += `\n`;
+  });
+  const blob = new Blob([out], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (state.meta.eventName || 'event-builder') + '-run-sheet.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+loadState();
+</script>
+</body>
+</html>
